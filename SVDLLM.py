@@ -6,6 +6,8 @@ import torch.jit
 from tqdm import tqdm
 import torch
 import torch.nn as nn
+from huggingface_hub import login
+login("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")
 
 from utils.data_utils import *
 from component.svd_llama import SVD_LlamaAttention, SVD_LlamaMLP
@@ -463,12 +465,12 @@ class local_update:
             self.U, self.S, self.VT = torch.linalg.svd(W_scale, full_matrices=False)  
         # trucation SVD
         num_s_after_trunc = int(W.shape[0] * W.shape[1] * ratio / (W.shape[0] + W.shape[1]))
-        self.truc_s = self.S[:num_s_after_trunc].cuda()
-        self.truc_u = self.U[:, :num_s_after_trunc].cuda()
+        self.truc_s = self.S[:num_s_after_trunc].to(self.dev)
+        self.truc_u = self.U[:, :num_s_after_trunc].to(self.dev)
         if direct_update:
-            self.truc_v = self.VT[:num_s_after_trunc, :].cuda()
+            self.truc_v = self.VT[:num_s_after_trunc, :].to(self.dev)
         else:
-            self.truc_v = torch.matmul(self.VT[:num_s_after_trunc, :].cuda(), scaling_matrix_inv)
+            self.truc_v = torch.matmul(self.VT[:num_s_after_trunc, :].to(self.dev), scaling_matrix_inv)
         self.truc_sigma = torch.diag(self.truc_s)
         self.new_w = torch.matmul(self.truc_u, torch.matmul(self.truc_sigma, self.truc_v[:num_s_after_trunc, :]))
         # intialize H for close form solution

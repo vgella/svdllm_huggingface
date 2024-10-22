@@ -127,7 +127,8 @@ class SVD_LlamaAttention(nn.Module):
                 f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
                 f" and `num_heads`: {self.num_heads})."
             )
-        low_rank = int(self.hidden_size * self.ratio/2)
+        low_rank = int(self.hidden_size * self.ratio)
+        print(low_rank)
         self.q_u_proj = nn.Linear(low_rank, self.num_heads * self.head_dim, bias=False)
         self.q_v_proj = nn.Linear(self.hidden_size, low_rank, bias=False)
 
@@ -153,10 +154,18 @@ class SVD_LlamaAttention(nn.Module):
         past_key_value: Optional[Tuple[torch.Tensor]] = None,
         output_attentions: bool = False,
         use_cache: bool = False,
+        **kwargs
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
     
         query_states = self.q_u_proj(self.q_v_proj(hidden_states)).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+        key_states_1=self.k_v_proj(hidden_states)
+
+        print(key_states_1.shape)
+        key_states = self.k_u_proj(key_states_1)
+        print("Shape of key_states after projection:", key_states.shape)
+        print("Expected number of elements:", bsz * q_len * self.num_heads * self.head_dim)
+        print("Actual number of elements:", key_states.numel())
 
         key_states = self.k_u_proj(self.k_v_proj(hidden_states)).view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
 
